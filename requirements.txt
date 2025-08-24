@@ -1,0 +1,11 @@
+streamlit
+langchain
+langchain-google-genai
+google-generativeai
+huggingface-hub
+faiss-cpu
+unstructured
+tiktoken
+python-dotenv
+beautifulsoup4
+requests
