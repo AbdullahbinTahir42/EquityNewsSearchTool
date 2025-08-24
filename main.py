@@ -3,7 +3,7 @@ import streamlit as st
 import pickle
 import time
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import RetreivalQAWithSourcesChain
+from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.embeddings import HuggingFaceEmbeddings
