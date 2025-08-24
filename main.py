@@ -2,13 +2,15 @@ import os
 import streamlit as st
 import pickle
 import time
+import google.generativeai as genai
+from langchain.text_splitter import RecursiveCharacterTextSplitter as rec
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQAWithSourcesChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import UnstructuredURLLoader
+from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
