@@ -15,7 +15,7 @@ gemini_api_key = os.getenv("GEMINI_API_KEY")
 if gemini_api_key is None:
     raise ValueError("GEMINI_API_KEY environment variable is not set")
 os.environ["GOOGLE_API_KEY"] = gemini_api_key
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-Pro", temperature=0)
 
 st.title("News Search Tool📈")
 st.sidebar.title("New Article URLS")
