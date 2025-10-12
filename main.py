@@ -26,7 +26,7 @@ os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
 # 1. FIX: Changed model name to standard lowercase ("gemini-2.5-pro") 
 # to avoid NotFound or Invalid Argument errors caused by incorrect casing.
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
 st.title("News Search Tool📈")
 st.sidebar.title("New Article URLS")
