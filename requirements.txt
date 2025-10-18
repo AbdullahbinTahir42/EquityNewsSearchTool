@@ -1,13 +1,21 @@
 streamlit
-langchain
-langchain_community
-langchain-google-genai
-google-generativeai
-huggingface-hub
+
+# Core LangChain ecosystem (with pinned versions for stability)
+langchain>=0.2.14
+langchain-core>=0.1.45
+langchain-community>=0.2.12
+langchain-text-splitters>=0.0.2
+langchain-google-genai>=0.0.9
+
+# Embeddings & loaders
 faiss-cpu
 unstructured
-tiktoken
+huggingface-hub
+sentence-transformers
+
+# Google + environment + utilities
+google-generativeai
 python-dotenv
+tiktoken
 beautifulsoup4
 requests
-sentence-transformers
