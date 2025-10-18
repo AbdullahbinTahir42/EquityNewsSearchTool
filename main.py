@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import pickle
-from langchain.text_splitter import RecursiveCharacterTextSplitter as rec
+from langchain_text_splitters import RecursiveCharacterTextSplitter as rec
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQAWithSourcesChain
 # Using the recommended community imports for embeddings and loaders
