@@ -1,21 +1,23 @@
 streamlit
 
-# Core LangChain ecosystem (with pinned versions for stability)
+# Core LangChain ecosystem (pinned for stability)
 langchain>=0.2.14
 langchain-core>=0.1.45
 langchain-community>=0.2.12
 langchain-text-splitters>=0.0.2
-langchain-google-genai>=0.0.9
+langchain-google-genai>=1.0.0
 
-# Embeddings & loaders
+# Embeddings & vector store
 faiss-cpu
-unstructured
-huggingface-hub
 sentence-transformers
+huggingface-hub
 
-# Google + environment + utilities
+# Document loaders & processing
+unstructured[local-inference]
+beautifulsoup4
+requests
+
+# Google API & utilities
 google-generativeai
 python-dotenv
 tiktoken
-beautifulsoup4
-requests
