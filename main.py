@@ -18,23 +18,20 @@ load_dotenv()
 # --- Configuration and Initialization ---
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 if not gemini_api_key:
-    st.error("GEMINI_API_KEY environment variable is not set. Please set it in your .env file.")
+    st.error("GEMINI_API_KEY environment variable is not set. Please set it in your .env file or Streamlit Secrets.")
     st.stop()
     
 # Set the environment variable used by the underlying Google SDK client
 os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
-# FIX 1: Updated to the current stable Gemini model
+# Initialize Model and Embeddings
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
-
-# FIX 2: Moved embeddings initialization up so both saving and loading can use it
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 st.title("News Search Tool 📈")
 st.sidebar.title("News Article URLs")
 
 urls = []
-# FIX 3: Removed pickle extension. FAISS expects a directory name to save its internal files.
 faiss_dir = "faiss_index"
 main_placeholder = st.empty()
 
@@ -67,14 +64,12 @@ if process_url_clicked:
     main_placeholder.text(f"Splitting {len(data)} documents...")
     docs = text_splitter.split_documents(data)
 
-    # Embedding
+    # Embedding and Vectorstore Creation
     main_placeholder.text(f"Creating embeddings for {len(docs)} chunks...")
     vectorstore = FAISS.from_documents(docs, embeddings)
 
-    # Store
+    # Save to local directory
     main_placeholder.text("Storing vectorstore...") 
-    
-    # FIX 4: Use native FAISS saving instead of python pickle to prevent crashes
     vectorstore.save_local(faiss_dir)
     
     main_placeholder.success("Vector Store created and saved successfully!")
@@ -87,11 +82,11 @@ if query:
     else:
         main_placeholder.empty() 
 
-        # FIX 5: Native FAISS load. allow_dangerous_deserialization is required in newer versions for local files.
+        # Load FAISS index safely
         vectorstore = FAISS.load_local(faiss_dir, embeddings, allow_dangerous_deserialization=True)
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
-        # FIX 6: Replaced deprecated RetrievalQAWithSourcesChain with modern LCEL chains
+        # Set up standard LCEL retrieval chain
         system_prompt = (
             "You are a helpful assistant for question-answering tasks. "
             "Use the following pieces of retrieved context to answer the question. "
@@ -103,20 +98,19 @@ if query:
             ("human", "{input}"),
         ])
         
-        # Combine documents into the prompt, then create the retrieval chain
         question_answer_chain = create_stuff_documents_chain(llm, prompt)
         chain = create_retrieval_chain(retriever, question_answer_chain)
 
         st.text("Searching documents and generating answer...")
         
         try:
-            # FIX 7: Use .invoke() instead of calling the chain directly
+            # Execute chain
             response = chain.invoke({"input": query})
             
             st.header("Answer:")
             st.write(response["answer"])
 
-            # FIX 8: Extracting sources manually from the returned context documents
+            # Extract sources
             sources = set([doc.metadata.get("source") for doc in response["context"] if doc.metadata.get("source")])
             if sources:
                 st.subheader("Sources:")
