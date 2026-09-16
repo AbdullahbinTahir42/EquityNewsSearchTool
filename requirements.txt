@@ -1,22 +1,21 @@
-# Streamlit & Core
 streamlit>=1.30.0
 python-dotenv>=1.0.1
 
-# LangChain Ecosystem (Synced to v0.3 to fix chains error)
-langchain>=0.3.0
-langchain-core>=0.3.0
-langchain-community>=0.3.0
-langchain-text-splitters>=0.3.0
-langchain-google-genai>=2.0.0
-langchain-huggingface>=0.1.0
+# Strictly pin LangChain to prevent pip from downgrading it
+langchain==0.3.0
+langchain-core==0.3.0
+langchain-community==0.3.0
+langchain-text-splitters==0.3.0
+langchain-google-genai==2.0.0
+langchain-huggingface==0.1.0
 
 # Embeddings & Vector Store
 faiss-cpu>=1.8.0
 sentence-transformers>=3.0.0
 huggingface-hub>=0.24.0
 
-# Document Loaders & Processing
-unstructured[local-inference]>=0.15.0
+# Document Loaders (Removed [local-inference] to fix conflicts)
+unstructured>=0.15.0
 beautifulsoup4>=4.12.0
 requests>=2.32.0
 
