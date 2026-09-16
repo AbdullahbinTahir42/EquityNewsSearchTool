@@ -25,7 +25,7 @@ if not gemini_api_key:
 os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
 # Initialize Model and Embeddings
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 st.title("News Search Tool 📈")
