@@ -1,38 +1,41 @@
 import os
 import streamlit as st
-import pickle
-from langchain_text_splitters import RecursiveCharacterTextSplitter as rec
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import RetrievalQAWithSourcesChain
-# Using the recommended community imports for embeddings and loaders
-from langchain_community.document_loaders import UnstructuredURLLoader
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
+
+# Modern Langchain Imports
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.document_loaders import UnstructuredURLLoader
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 
 # Load environment variables from .env file
 load_dotenv()
 
 # --- Configuration and Initialization ---
-
 gemini_api_key = os.getenv("GEMINI_API_KEY")
-if gemini_api_key is None:
-    # Use st.error instead of raise for better Streamlit display
-    st.error("GEMINI_API_KEY environment variable is not set. Please set it.")
+if not gemini_api_key:
+    st.error("GEMINI_API_KEY environment variable is not set. Please set it in your .env file.")
     st.stop()
     
 # Set the environment variable used by the underlying Google SDK client
 os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
-# 1. FIX: Changed model name to standard lowercase ("gemini-2.5-pro") 
-# to avoid NotFound or Invalid Argument errors caused by incorrect casing.
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+# FIX 1: Updated to the current stable Gemini model
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
 
-st.title("News Search Tool📈")
-st.sidebar.title("New Article URLS")
+# FIX 2: Moved embeddings initialization up so both saving and loading can use it
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+st.title("News Search Tool 📈")
+st.sidebar.title("News Article URLs")
 
 urls = []
-file_path = "faiss_index.pkl"
+# FIX 3: Removed pickle extension. FAISS expects a directory name to save its internal files.
+faiss_dir = "faiss_index"
 main_placeholder = st.empty()
 
 for i in range(3):
@@ -42,8 +45,7 @@ for i in range(3):
 process_url_clicked = st.sidebar.button("Process URLs")
 
 if process_url_clicked:
-    # Check if any non-empty URLs were provided
-    valid_urls = [url for url in urls if url]
+    valid_urls = [url for url in urls if url.strip()]
     if not valid_urls:
         st.sidebar.warning("Please enter at least one valid URL.")
         st.stop()
@@ -58,7 +60,7 @@ if process_url_clicked:
         st.stop()
 
     # Splitting text 
-    text_splitter = rec(
+    text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=100
     )
@@ -66,56 +68,60 @@ if process_url_clicked:
     docs = text_splitter.split_documents(data)
 
     # Embedding
-    # 2. FIX: Using HuggingFaceEmbeddings from langchain_community
-    embeddings = HuggingFaceEmbeddings()
     main_placeholder.text(f"Creating embeddings for {len(docs)} chunks...")
     vectorstore = FAISS.from_documents(docs, embeddings)
 
     # Store
     main_placeholder.text("Storing vectorstore...") 
-
-    with open(file_path, "wb") as f:
-        pickle.dump(vectorstore, f)
+    
+    # FIX 4: Use native FAISS saving instead of python pickle to prevent crashes
+    vectorstore.save_local(faiss_dir)
     
     main_placeholder.success("Vector Store created and saved successfully!")
 
 query = st.text_input("Question: ")
 
 if query:
-    if not os.path.exists(file_path):
+    if not os.path.exists(faiss_dir):
         st.error("Vector Store not found. Please process URLs first.")
     else:
-        main_placeholder.empty() # Clear the previous success message/placeholder
+        main_placeholder.empty() 
 
-        with open(file_path, "rb") as f:
-            vectorstore = pickle.load(f)
+        # FIX 5: Native FAISS load. allow_dangerous_deserialization is required in newer versions for local files.
+        vectorstore = FAISS.load_local(faiss_dir, embeddings, allow_dangerous_deserialization=True)
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
-            # 3. CRITICAL FIX: Changed 'stuff' to 'map_reduce' chain type.
-            # The 'stuff' chain puts ALL documents into a single prompt, which likely
-            # caused the 'Invalid Argument' error due to context window overload.
-            # 'map_reduce' processes documents individually (mapping) and then
-            # synthesizes the answers (reducing), handling large inputs gracefully.
-            chain = RetrievalQAWithSourcesChain.from_chain_type(
-                llm=llm,
-                retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
-                chain_type="map_reduce" 
-            )
+        # FIX 6: Replaced deprecated RetrievalQAWithSourcesChain with modern LCEL chains
+        system_prompt = (
+            "You are a helpful assistant for question-answering tasks. "
+            "Use the following pieces of retrieved context to answer the question. "
+            "If you don't know the answer, just say that you don't know. "
+            "Context: {context}"
+        )
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ])
+        
+        # Combine documents into the prompt, then create the retrieval chain
+        question_answer_chain = create_stuff_documents_chain(llm, prompt)
+        chain = create_retrieval_chain(retriever, question_answer_chain)
 
-            st.text("Searching documents and generating answer...")
+        st.text("Searching documents and generating answer...")
+        
+        try:
+            # FIX 7: Use .invoke() instead of calling the chain directly
+            response = chain.invoke({"input": query})
             
-            try:
-                # This is the line that caused the error previously
-                response = chain({"question": query}, return_only_outputs=True)
-                
-                st.header("Answer:")
-                st.subheader(response["answer"])
+            st.header("Answer:")
+            st.write(response["answer"])
 
-                sources = response.get("sources", "")
-                if sources:
-                    st.subheader("Sources:")
-                    source_list = sources.split("\n")
-                    for source in source_list:
-                        if source.strip(): # Avoid empty lines
-                            st.write(f"- {source}")
-            except Exception as e:
-                st.error(f"An error occurred during chain execution. Try a simpler query or check the logs: {e}")
+            # FIX 8: Extracting sources manually from the returned context documents
+            sources = set([doc.metadata.get("source") for doc in response["context"] if doc.metadata.get("source")])
+            if sources:
+                st.subheader("Sources:")
+                for source in sources:
+                    st.write(f"- {source}")
+                    
+        except Exception as e:
+            st.error(f"An error occurred during chain execution: {e}")
