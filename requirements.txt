@@ -1,23 +1,20 @@
-streamlit
-
-# Core LangChain ecosystem (pinned for stability)
+streamlit>=1.30.0
 langchain>=0.2.14
-langchain-core>=0.1.45
+langchain-core>=0.2.33
 langchain-community>=0.2.12
-langchain-text-splitters>=0.0.2
-langchain-google-genai>=1.0.0
+langchain-text-splitters>=0.2.0
+langchain-google-genai>=1.0.8
+langchain-huggingface>=0.0.3
 
 # Embeddings & vector store
-faiss-cpu
-sentence-transformers
-huggingface-hub
+faiss-cpu>=1.8.0
+sentence-transformers>=3.0.0
+huggingface-hub>=0.24.0
 
 # Document loaders & processing
-unstructured[local-inference]
-beautifulsoup4
-requests
+unstructured[local-inference]>=0.15.0
+beautifulsoup4>=4.12.0
+requests>=2.32.0
 
-# Google API & utilities
-google-generativeai
-python-dotenv
-tiktoken
+# Environment variables
+python-dotenv>=1.0.1
