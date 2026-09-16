@@ -5,14 +5,15 @@ from dotenv import load_dotenv
 # Modern Langchain Imports
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.document_loaders import UnstructuredURLLoader
+# FIX 1: Switched to WebBaseLoader which is much more reliable for news articles
+from langchain_community.document_loaders import WebBaseLoader 
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 # --- Configuration and Initialization ---
@@ -21,11 +22,10 @@ if not gemini_api_key:
     st.error("GEMINI_API_KEY environment variable is not set. Please set it in your .env file or Streamlit Secrets.")
     st.stop()
     
-# Set the environment variable used by the underlying Google SDK client
 os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
 # Initialize Model and Embeddings
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 st.title("News Search Tool 📈")
@@ -47,8 +47,8 @@ if process_url_clicked:
         st.sidebar.warning("Please enter at least one valid URL.")
         st.stop()
 
-    # Loading data
-    loader = UnstructuredURLLoader(urls=valid_urls)
+    # Loading data using the more reliable WebBaseLoader
+    loader = WebBaseLoader(web_paths=valid_urls)
     main_placeholder.text("Loading data...")
     try:
         data = loader.load()
@@ -61,8 +61,13 @@ if process_url_clicked:
         chunk_size=1000,
         chunk_overlap=100
     )
-    main_placeholder.text(f"Splitting {len(data)} documents...")
+    main_placeholder.text(f"Splitting documents...")
     docs = text_splitter.split_documents(data)
+
+    # FIX 2: Prevent the IndexError by checking if docs is empty before passing to FAISS
+    if not docs:
+        main_placeholder.error("Error: No text could be extracted from these URLs. The websites might be blocking bots or require JavaScript rendering.")
+        st.stop()
 
     # Embedding and Vectorstore Creation
     main_placeholder.text(f"Creating embeddings for {len(docs)} chunks...")
